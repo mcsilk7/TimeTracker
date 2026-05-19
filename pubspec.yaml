@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   app_usage: ^4.1.0
   installed_apps: ^2.1.1
+  shared_preferences: ^2.1.1
 
 
 dev_dependencies:

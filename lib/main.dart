@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'app_usage_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/app_usage_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -15,10 +16,33 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   ThemeMode _themeMode = ThemeMode.light;
 
-  void _toggleTheme(bool isDark) {
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString('theme_mode') ?? 'light';
     setState(() {
-      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+      _themeMode = stored == 'system'
+          ? ThemeMode.system
+          : stored == 'dark'
+              ? ThemeMode.dark
+              : ThemeMode.light;
     });
+  }
+
+  Future<void> _setThemeMode(ThemeMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = mode == ThemeMode.system
+        ? 'system'
+        : mode == ThemeMode.dark
+            ? 'dark'
+            : 'light';
+    await prefs.setString('theme_mode', value);
+    setState(() => _themeMode = mode);
   }
 
   @override
@@ -52,8 +76,8 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       home: AppUsageScreen(
-        isDarkMode: _themeMode == ThemeMode.dark,
-        onThemeToggle: _toggleTheme,
+        themeMode: _themeMode,
+        onThemeModeChanged: _setThemeMode,
       ),
     );
   }

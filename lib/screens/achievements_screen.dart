@@ -45,12 +45,57 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   /// Dane ALL-TIME – używane tylko do podium top 3
   List<Map<String, dynamic>> _allTimeApps = [];
 
+  /// Statystyki dzienne z ostatniego tygodnia
+  Duration _maxDailyTime = Duration.zero;
+  Duration _minDailyTime = Duration.zero;
+
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  Future<void> _loadDailyStats() async {
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    final startOfWeek = startOfToday.subtract(Duration(days: now.weekday - 1));
+    final appUsage = AppUsage();
+    final appsCache = await buildAppsCache();
+
+    Duration maxDaily = Duration.zero;
+    Duration minDaily = Duration(days: 365);
+
+    for (int offset = 0; offset < 7; offset++) {
+      final dayStart = startOfWeek.add(Duration(days: offset));
+      final dayEnd = dayStart.add(const Duration(days: 1));
+
+      try {
+        final infos = await appUsage.getAppUsage(dayStart, dayEnd);
+        Duration dailyTotal = Duration.zero;
+        for (final info in infos) {
+          if (info.usage.inSeconds < 10) continue;
+          if (!appsCache.containsKey(info.packageName)) continue;
+          dailyTotal += info.usage;
+        }
+
+        // Max czas dzienia
+        if (dailyTotal > maxDaily) maxDaily = dailyTotal;
+
+        // Min czas dzienia (ale nie zero)
+        if (dailyTotal > Duration.zero && dailyTotal < minDaily) {
+          minDaily = dailyTotal;
+        }
+      } catch (_) {}
+    }
+
+    if (mounted) {
+      setState(() {
+        _maxDailyTime = maxDaily;
+        _minDailyTime = minDaily == Duration(days: 365) ? Duration.zero : minDaily;
+      });
+    }
   }
 
   Future<void> _load() async {
@@ -80,6 +125,9 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
           _isLoading = false;
         });
       }
+
+      // Załaduj statystyki dzienne
+      await _loadDailyStats();
     } catch (e) {
       debugPrint('Błąd osiągnięć: $e');
       if (mounted) setState(() => _isLoading = false);
@@ -89,19 +137,19 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   List<_Achievement> get _achievements {
     return [
       _Achievement(
-        title: 'Łączny czas na ekranie',
-        description: 'Suma wszystkich sesji z ostatnich 90 dni',
-        icon: Icons.timer_outlined,
-        value: formatDuration(_totalTime),
-        color: Colors.blueAccent,
+        title: 'Rekord dnia',
+        description: 'Maksymalny czas spędzony na telefonie w ciągu dnia',
+        icon: Icons.trending_up,
+        value: formatDuration(_maxDailyTime),
+        color: Colors.greenAccent,
       ),
-      if (_apps.isNotEmpty)
+      if (_minDailyTime > Duration.zero)
         _Achievement(
-          title: 'Najmniej używana aplikacja',
-          description: _apps.last['prettyName'] as String,
+          title: 'Najsłabszy dzień',
+          description: 'Minimalny czas spędzony na telefonie w ciągu dnia',
           icon: Icons.trending_down,
-          value: formatDuration(_apps.last['usage'] as Duration),
-          color: Colors.orange,
+          value: formatDuration(_minDailyTime),
+          color: Colors.lightBlueAccent,
         ),
     ];
   }

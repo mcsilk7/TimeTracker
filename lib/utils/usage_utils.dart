@@ -16,27 +16,33 @@ String formatDuration(Duration duration) {
 }
 
 // ---------------------------------------------------------------------------
-// Zakres dat dla filtra
+// Zakres dat dla filtra – wszystkie granice zawsze dokładnie o północy
 // ---------------------------------------------------------------------------
 
-DateTime _startOfDay(DateTime date) => DateTime(date.year, date.month, date.day);
+/// Zwraca DateTime ustawiony na początek (00:00:00.000) podanego dnia.
+DateTime _midnight(DateTime date) =>
+    DateTime(date.year, date.month, date.day);
 
+/// Zwraca parę (start, end), gdzie obie wartości to dokładne północe.
+///
+/// Przykłady dla today = 2024-05-20:
+///   dzis     → 2024-05-20 00:00 … 2024-05-21 00:00  (cały bieżący dzień)
+///   wczoraj  → 2024-05-19 00:00 … 2024-05-20 00:00  (cały poprzedni dzień)
+///   tydzien  → 2024-05-14 00:00 … 2024-05-21 00:00  (ostatnie 7 pełnych dób)
+///   miesiac  → 2024-04-20 00:00 … 2024-05-21 00:00  (ostatnie 30 pełnych dób)
+///   rok      → 2024-02-20 00:00 … 2024-05-21 00:00  (ostatnie 90 pełnych dób)
+///   calyCzas → jak rok
 (DateTime start, DateTime end) getDateRange(TimeFilter filter) {
-  final now = DateTime.now();
-  final today = _startOfDay(now);
+  final today = _midnight(DateTime.now());
+  final tomorrow = today.add(const Duration(days: 1));
 
   return switch (filter) {
-    // For a single-day filter we want to cover the full day (00:00 - 24:00)
-    // so continuous sessions that span the midnight boundary are counted
-    // within that day's interval.
-    TimeFilter.dzis => (today, today.add(const Duration(days: 1))),
+    TimeFilter.dzis => (today, tomorrow),
     TimeFilter.wczoraj => (today.subtract(const Duration(days: 1)), today),
-    // For weekly summaries use full calendar days to avoid partial-day
-    // intervals and keep the data aligned to midnight boundaries.
-    TimeFilter.tydzien => (today.subtract(const Duration(days: 6)), today.add(const Duration(days: 1))),
-    TimeFilter.miesiac => (now.subtract(const Duration(days: 30)), now),
-    TimeFilter.rok => (now.subtract(const Duration(days: 90)), now),
-    TimeFilter.calyCzas => (now.subtract(const Duration(days: 90)), now),
+    TimeFilter.tydzien => (today.subtract(const Duration(days: 6)), tomorrow),
+    TimeFilter.miesiac => (today.subtract(const Duration(days: 29)), tomorrow),
+    TimeFilter.rok => (today.subtract(const Duration(days: 89)), tomorrow),
+    TimeFilter.calyCzas => (today.subtract(const Duration(days: 89)), tomorrow),
   };
 }
 

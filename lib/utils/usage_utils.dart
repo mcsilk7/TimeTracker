@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:app_usage/app_usage.dart';
 import 'package:installed_apps/installed_apps.dart';
 import 'package:installed_apps/app_info.dart';
@@ -17,9 +19,11 @@ String formatDuration(Duration duration) {
 // Zakres dat dla filtra
 // ---------------------------------------------------------------------------
 
+DateTime _startOfDay(DateTime date) => DateTime(date.year, date.month, date.day);
+
 (DateTime start, DateTime end) getDateRange(TimeFilter filter) {
   final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
+  final today = _startOfDay(now);
 
   return switch (filter) {
     // For a single-day filter we want to cover the full day (00:00 - 24:00)
@@ -27,7 +31,9 @@ String formatDuration(Duration duration) {
     // within that day's interval.
     TimeFilter.dzis => (today, today.add(const Duration(days: 1))),
     TimeFilter.wczoraj => (today.subtract(const Duration(days: 1)), today),
-    TimeFilter.tydzien => (now.subtract(const Duration(days: 7)), now),
+    // For weekly summaries use full calendar days to avoid partial-day
+    // intervals and keep the data aligned to midnight boundaries.
+    TimeFilter.tydzien => (today.subtract(const Duration(days: 6)), today.add(const Duration(days: 1))),
     TimeFilter.miesiac => (now.subtract(const Duration(days: 30)), now),
     TimeFilter.rok => (now.subtract(const Duration(days: 90)), now),
     TimeFilter.calyCzas => (now.subtract(const Duration(days: 90)), now),
@@ -38,29 +44,10 @@ String formatDuration(Duration duration) {
 // Filtrowanie aplikacji systemowych
 // ---------------------------------------------------------------------------
 
-const _systemAppWhitelist = {
-  'com.google.android.youtube',
-  'com.android.chrome',
-  'com.facebook.katana',
-  'com.google.android.apps.maps',
-  'com.google.android.gm',
-  'com.google.android.apps.photos',
-};
-
-const _blockedPrefixes = [
-  'com.android.',
-  'android.',
-  'com.google.android.providers',
-  'com.google.android.inputmethod',
-];
-
-bool isSystemService(String packageName) {
-  if (packageName == 'android') return true;
-  return _blockedPrefixes.any((p) => packageName.startsWith(p));
+bool _hasIcon(AppInfo app) {
+  final icon = app.icon;
+  return icon is Uint8List && icon.isNotEmpty;
 }
-
-bool isWhitelisted(String packageName) =>
-    _systemAppWhitelist.contains(packageName);
 
 // ---------------------------------------------------------------------------
 // Cache zainstalowanych aplikacji
@@ -73,8 +60,7 @@ Future<Map<String, AppInfo>> buildAppsCache() async {
   );
   return {
     for (final app in apps)
-      if (app.packageName != null && app.packageName!.isNotEmpty)
-        app.packageName!: app,
+      if (app.packageName.isNotEmpty && _hasIcon(app)) app.packageName: app,
   };
 }
 
@@ -99,10 +85,12 @@ Future<({List<Map<String, dynamic>> apps, Duration totalTime})>
   final Map<String, Duration> aggregated = {};
   for (final info in infoList) {
     if (info.usage.inSeconds < 10) continue;
-    if (isSystemService(info.packageName)) continue;
 
-    aggregated[info.packageName] =
-        (aggregated[info.packageName] ?? Duration.zero) + info.usage;
+    aggregated.update(
+      info.packageName,
+      (existing) => existing + info.usage,
+      ifAbsent: () => info.usage,
+    );
   }
 
   final List<Map<String, dynamic>> result = [];
@@ -113,20 +101,16 @@ Future<({List<Map<String, dynamic>> apps, Duration totalTime})>
     final usage = entry.value;
     final AppInfo? cachedApp = appsCache[packageName];
 
-    // Pomijaj systemowe niewhitelistowane
-    if (cachedApp != null &&
-        cachedApp.isSystemApp == true &&
-        !isWhitelisted(packageName)) {
-      continue;
-    }
+    // Pomijaj aplikacje, dla których nie mamy ikony.
+    if (cachedApp == null) continue;
 
     totalTime += usage;
 
     result.add({
       'packageName': packageName,
-      'prettyName': cachedApp?.name ?? packageName.split('.').last,
+      'prettyName': cachedApp.name ?? packageName.split('.').last,
       'usage': usage,
-      'icon': cachedApp?.icon,
+      'icon': cachedApp.icon,
     });
   }
 

@@ -55,6 +55,7 @@ class _WeeklyActivityScreenState extends State<WeeklyActivityScreen>
     final startOfToday = DateTime(today.year, today.month, today.day);
     final startOfWeek = startOfToday.subtract(Duration(days: today.weekday - 1));
     final appUsage = AppUsage();
+    final appsCache = await buildAppsCache();
     final List<_DayUsage> week = [];
 
     for (int offset = 0; offset < 7; offset++) {
@@ -67,7 +68,7 @@ class _WeeklyActivityScreenState extends State<WeeklyActivityScreen>
         Duration total = Duration.zero;
         for (final info in infos) {
           if (info.usage.inSeconds < 10) continue;
-          if (isSystemService(info.packageName)) continue;
+          if (!appsCache.containsKey(info.packageName)) continue;
           total += info.usage;
         }
         week.add(_DayUsage(
@@ -302,7 +303,7 @@ class _ChartCard extends StatelessWidget {
                       ? primary
                       : day.duration == Duration.zero
                           ? theme.colorScheme.surfaceContainerHighest
-                          : primary.withOpacity(0.45 + ratio * 0.4);
+                          : primary.withValues(alpha: 0.45 + ratio * 0.4);
 
                   return Expanded(
                     child: Padding(
@@ -336,7 +337,7 @@ class _ChartCard extends StatelessWidget {
                               boxShadow: day.isToday
                                   ? [
                                       BoxShadow(
-                                        color: primary.withOpacity(0.35),
+                                        color: primary.withValues(alpha: 0.35),
                                         blurRadius: 8,
                                         offset: const Offset(0, 3),
                                       )
@@ -423,7 +424,7 @@ class _StatCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.13),
+                color: color.withValues(alpha: 0.13),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: color, size: 16),
@@ -441,7 +442,7 @@ class _StatCard extends StatelessWidget {
               Text(
                 sublabel!,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: color.withOpacity(0.8),
+                  color: color.withValues(alpha: 0.8),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -534,7 +535,7 @@ class _DayRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final barColor = day.isToday ? primary : primary.withOpacity(0.5);
+    final barColor = day.isToday ? primary : primary.withValues(alpha: 0.5);
     final emptyColor = theme.colorScheme.surfaceContainerHighest;
 
     return Padding(

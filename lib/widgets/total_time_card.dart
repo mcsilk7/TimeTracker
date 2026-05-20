@@ -31,8 +31,8 @@ class TotalTimeCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withOpacity(0.4)
-                : Colors.blueAccent.withOpacity(0.3),
+                ? Colors.black.withValues(alpha: 0.4)
+                : Colors.blueAccent.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

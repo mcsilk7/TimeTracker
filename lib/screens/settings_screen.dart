@@ -39,18 +39,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: Text('Motyw'),
             subtitle: Text('Wybierz preferowany motyw aplikacji'),
           ),
+          // ignore: deprecated_member_use
           RadioListTile<ThemeMode>(
             title: const Text('Systemowy'),
             value: ThemeMode.system,
             groupValue: _selected,
             onChanged: _onChanged,
           ),
+          // ignore: deprecated_member_use
           RadioListTile<ThemeMode>(
             title: const Text('Jasny'),
             value: ThemeMode.light,
             groupValue: _selected,
             onChanged: _onChanged,
           ),
+          // ignore: deprecated_member_use
           RadioListTile<ThemeMode>(
             title: const Text('Ciemny'),
             value: ThemeMode.dark,

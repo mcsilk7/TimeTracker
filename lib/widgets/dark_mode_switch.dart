@@ -24,10 +24,10 @@ class DarkModeSwitch extends StatelessWidget {
         Switch(
           value: isDark,
           onChanged: onChanged,
-          activeColor: Colors.blueAccent,
-          activeTrackColor: Colors.blueAccent.withOpacity(0.4),
+          activeThumbColor: Colors.blueAccent,
+          activeTrackColor: Colors.blueAccent.withValues(alpha: 0.4),
           inactiveThumbColor: Colors.orange,
-          inactiveTrackColor: Colors.orange.withOpacity(0.3),
+          inactiveTrackColor: Colors.orange.withValues(alpha: 0.3),
         ),
       ],
     );

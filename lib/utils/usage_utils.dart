@@ -22,27 +22,29 @@ String formatDuration(Duration duration) {
 /// Zwraca DateTime ustawiony na początek (00:00:00.000) podanego dnia.
 DateTime _midnight(DateTime date) =>
     DateTime(date.year, date.month, date.day);
-
-/// Zwraca parę (start, end), gdzie obie wartości to dokładne północe.
-///
-/// Przykłady dla today = 2024-05-20:
-///   dzis     → 2024-05-20 00:00 … 2024-05-21 00:00  (cały bieżący dzień)
-///   wczoraj  → 2024-05-19 00:00 … 2024-05-20 00:00  (cały poprzedni dzień)
-///   tydzien  → 2024-05-14 00:00 … 2024-05-21 00:00  (ostatnie 7 pełnych dób)
-///   miesiac  → 2024-04-20 00:00 … 2024-05-21 00:00  (ostatnie 30 pełnych dób)
-///   rok      → 2024-02-20 00:00 … 2024-05-21 00:00  (ostatnie 90 pełnych dób)
-///   calyCzas → jak rok
 (DateTime start, DateTime end) getDateRange(TimeFilter filter) {
   final today = _midnight(DateTime.now());
   final tomorrow = today.add(const Duration(days: 1));
 
   return switch (filter) {
+    // Dokładne zakresy czasowe - zawsze od 00:00 do 00:00 następnego dnia
     TimeFilter.dzis => (today, tomorrow),
+    // dzis     → 2024-05-20 00:00 … 2024-05-21 00:00  (cały bieżący dzień)
+    
     TimeFilter.wczoraj => (today.subtract(const Duration(days: 1)), today),
-    TimeFilter.tydzien => (today.subtract(const Duration(days: 6)), tomorrow),
-    TimeFilter.miesiac => (today.subtract(const Duration(days: 29)), tomorrow),
-    TimeFilter.rok => (today.subtract(const Duration(days: 89)), tomorrow),
-    TimeFilter.calyCzas => (today.subtract(const Duration(days: 89)), tomorrow),
+    // wczoraj  → 2024-05-19 00:00 … 2024-05-20 00:00  (cały poprzedni dzień)
+    
+    TimeFilter.tydzien => (today.subtract(const Duration(days: 7)), tomorrow),
+    // ostatnie 7 pełnych dni
+    
+    TimeFilter.miesiac => (today.subtract(const Duration(days: 30)), tomorrow),
+    // ostatnie 30 pełnych dni
+    
+    TimeFilter.rok => (today.subtract(const Duration(days: 365)), tomorrow),
+    // ostatnie 365 pełnych dni
+    
+    TimeFilter.calyCzas => (today.subtract(const Duration(days: 365)), tomorrow),
+    // cały dostępny czas (365 dni)
   };
 }
 
